@@ -231,14 +231,6 @@ const initVDom = () => {
     console.log(timePerformanceArray);
 };
 
-
-// istrazi za Node api so e razlikata
-// performance da dava output array
-// napravi univerzalen react proekt za merenje vreme
-// proveri gi us ednas site tocki da vidis dali e se taman
-
-
-
 const colors = ['red', 'green', 'blue', 'grey', 'purple'];
 
 const forbiddenProps = [
