@@ -62,7 +62,12 @@ class VElement {
     }
     addDummyChilds(childNum, childTag) {
         for (let i = 0; i < childNum; i++) {
-            this.addChildren(new VElement(childTag, { id: `${childTag}${i}` }, ['dummy']));
+            const props = { 
+                id: `${childTag}${i}`,
+                color: 'black'
+
+            };
+            this.addChildren(new VElement(childTag, { id: `${childTag}${i}` }, ['dummy-original']));
         }
     }
     recursiveDeepClone() {
@@ -205,17 +210,46 @@ const writeToDom = ( VDom ) => {
     root.appendChild(callFnPerformanceLogging(() => VDom.render(), 'VElement.render()'));
 }
 
-const getRenderDiffPerformance = ( numberOfModifiedChilds ) => {
+const getRenderDiffPerformance = (numberOfModifiedChilds) => {
     const timePerformanceArray = [];
-    numberOfModifiedChilds.forEach(numberOfChilds => {
+    for (let i = 0; i < numberOfModifiedChilds.length; i++) {
+        const numberOfChilds = numberOfModifiedChilds[i];
         const newVDom = generateChilds();
         newVDom.render();
         const oldVDom = newVDom.recursiveDeepClone();
         newVDom.children[1].modifyRandomChilds(numberOfChilds);
         timePerformanceArray.push(getExecutionTime(() => oldVDom.renderDiff(newVDom)));
-    });
+    }
     return timePerformanceArray;
 }
+
+
+const getRenderPerformance = (numberOfChilds) => {
+    const timePerformanceArray = [];
+    for (let i = 0; i < numberOfChilds.length; i++) {
+        const numberOfChildsValue = numberOfChilds[i];
+        const newVDom = generateChilds();
+        newVDom.render();
+        newVDom.children[1].modifyRandomChilds(numberOfChildsValue);
+        timePerformanceArray.push(getExecutionTime(() => newVDom.render()));
+    }
+    return timePerformanceArray;
+}
+const averageArrays = (arrays) => {
+    const length = arrays[0].length;
+    const sumArray = new Array(length).fill(0);
+
+    // Sum the corresponding elements of all arrays
+    arrays.forEach(array => {
+        for (let i = 0; i < length; i++) {
+            sumArray[i] += array[i];
+        }
+    });
+
+    // Calculate the average by dividing each sum by the number of runs
+    return sumArray.map(sum => sum / arrays.length);
+};
+
 
 const initVDom = () => {
     const newVDom = generateChilds();
@@ -227,8 +261,27 @@ const initVDom = () => {
 
     callFnPerformanceLogging(() => oldVDom.renderDiff(newVDom), 'VElement.renderDiff() with 100 modified childs');
   
-    const timePerformanceArray = getRenderDiffPerformance([10, 20, 50, 100, 300, 500, 1000, 3000, 5000]);
-    console.log(timePerformanceArray);
+    const numberOfModifiedChilds = [10, 20, 50, 100, 300, 500, 1000, 3000, 5000, 9000];
+
+    const testRuns = 10;
+    let renderPerformanceResults = [];
+    let diffPerformanceResults = [];
+
+
+    for (let i = 0; i < testRuns; i++) {
+        // console.log(`Running test ${i + 1}...`);
+
+        // Run the getRenderPerformance and getRenderDiffPerformance functions
+        renderPerformanceResults.push(getRenderPerformance(numberOfModifiedChilds));
+        diffPerformanceResults.push(getRenderDiffPerformance(numberOfModifiedChilds));
+    }
+
+    // Calculate the average values for both performance arrays
+    const avgRenderPerformanceArray = averageArrays(renderPerformanceResults);
+    const avgDiffPerformanceArray = averageArrays(diffPerformanceResults);
+
+    console.log("Average render performance array:", avgRenderPerformanceArray);
+    console.log("Average diff performance array:", avgDiffPerformanceArray);
 };
 
 const colors = ['red', 'green', 'blue', 'grey', 'purple'];
