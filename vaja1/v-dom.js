@@ -1,3 +1,5 @@
+const getUniqueRandomNumber = (from, to) => Math.floor(Math.random() * (to - from + 1)) + from;
+
 class VElement {
     constructor(tag, props = {}, children = [], _el = null) {
         if (typeof tag !== 'string' || tag.trim() === '') {
@@ -26,7 +28,6 @@ class VElement {
     addChildren(child) { }
     render() { }
     addDummyChilds(childNum, childTag) { }
-    logRenderPerfomance() { }
     recursiveDeepClone() { }
     modifyRandomChilds() { }
 
@@ -45,7 +46,6 @@ class VElement {
         this._el = document.createElement(this.tag);
     
         for (let key in this.props) {
-            // Check if the key exists in the reverse mapping
             const actualProp = forbiddenPropsReverseMappping[key] || key;
             this._el.setAttribute(actualProp, this.props[key]);
         }
@@ -65,17 +65,8 @@ class VElement {
             this.addChildren(new VElement(childTag, { id: `${childTag}${i}` }, ['dummy']));
         }
     }
-    logRenderPerfomance() {
-        const start = performance.now();
-        const response = this.render();
-        const end = performance.now();
-        console.log(`Execution time for <${this.tag} id="${this.props.id}">..: ${end - start} ms`);
-        return response;
-    }
     recursiveDeepClone() {
         const clonedElement = new VElement(this.tag, { ...this.props }, [], this._el);
-        if (this._el){
-        }
         this.children.forEach(child => {
             if (child instanceof VElement) {
                 clonedElement.addChildren(child.recursiveDeepClone());
@@ -105,18 +96,21 @@ class VElement {
         }
     }
     renderDiff(newVDom) {
-        // Step 1: Compare the tags
         try {
+            // 1. Compare the tags
             if (this.tag !== newVDom.tag) {
                 this._el.replaceWith(newVDom.render());
+                this.tag = newVDom.tag;
+                this.props = newVDom.props;
+                this.children = newVDom.children;
                 return;
             }
     
-            // Step 2: Compare the props (attributes)
+            // 2. Compare props
             const oldProps = this.props;
             const newProps = newVDom.props;
     
-            // Update or add new attributes
+            // 2.1 Update or add new attributes
             for (let key in newProps) {
                 const actualProp = forbiddenPropsReverseMappping[key] || key;
                 if (oldProps[actualProp] !== newProps[key]) {
@@ -124,15 +118,17 @@ class VElement {
                 }
             }
     
-            // Remove old attributes that are no longer present
+            // 2.2 Remove old attributes that are no longer present
             for (let key in oldProps) {
                 const actualProp = forbiddenPropsReverseMappping[key] || key;
                 if (!(key in newProps)) {
                     this._el.removeAttribute(actualProp);
                 }
             }
+
+            this.props = newProps;
     
-            // Step 3: Compare children (text content and sub-elements)
+            // 3. Compare children (text content and sub-elements)
             const oldChildren = this.children;
             const newChildren = newVDom.children;
     
@@ -142,33 +138,32 @@ class VElement {
                 const newChild = newChildren[i];
     
                 if (newChild === undefined) {
-                    // Extra child in old VDOM, remove it
+                    // 3.1 Extra child in old VDOM, remove it
                     this._el.removeChild(this._el.childNodes[i]);
+                    this.children.splice(i, 1);
                 } else if (oldChild === undefined) {
-                    // Extra child in new VDOM, append it
+                    // 3.2 Extra child in new VDOM, append it
                     this._el.appendChild(newChild.render());
+                    this.children.splice(i, 0, newChild);
                 } else if (typeof oldChild === 'string' && typeof newChild === 'string') {
-                    // Compare text nodes
+                    // 3.3 Compare text nodes
                     if (oldChild !== newChild) {
                         this._el.childNodes[i].textContent = newChild;
+                        this.children[i] = newChild;
                     }
                 } else if (oldChild instanceof VElement && newChild instanceof VElement) {
-                    // Both are VElements, recurse on children
+                    // 3.4 Both are VElements, recurse on children
                     oldChild.renderDiff(newChild);
                 } else {
-                    // Replace the node if they are of different types (text vs. VElement)
+                    // 3.5 Replace the node if they are of different types (text vs. VElement)
                     this._el.replaceChild(newChild.render(), this._el.childNodes[i]);
+                    this.children[i] = newChild;
                 }
             }
         } catch (e) {
             console.error(e.message);
-            console.error(newVDom);
         }
-        
     }
-}
-const getUniqueRandomNumber = (from, to) => {
-    return Math.floor(Math.random() * (to - from + 1)) + from;
 }
 const getUniqueRandomArray = (from, to, count) => {
     const array = [];
@@ -189,7 +184,7 @@ const generateChilds = () => {
 
     return currentVDom;
 }
-const executionTime = (func, label) => {
+const callFnPerformanceLogging = (func, label) => {
     const start = performance.now();
     const response = func();
     const end = performance.now();
@@ -197,30 +192,46 @@ const executionTime = (func, label) => {
     return response;
 }
 
+const getExecutionTime = (func) => {
+    const start = performance.now();
+    func();
+    const end = performance.now();
+    return end - start;
+}
+
 const writeToDom = ( VDom ) => {
     const root = document.getElementById('root');
     root.innerHTML = '';
-    root.appendChild(executionTime(() => VDom.render(), 'VElement.render()'));
+    root.appendChild(callFnPerformanceLogging(() => VDom.render(), 'VElement.render()'));
 }
-const renderDiff = (oldVDom, newVDom) => {
-    executionTime(() => oldVDom.renderDiff(newVDom), 'renderDiff()');
+
+const getRenderDiffPerformance = ( numberOfModifiedChilds ) => {
+    const timePerformanceArray = [];
+    numberOfModifiedChilds.forEach(numberOfChilds => {
+        const newVDom = generateChilds();
+        newVDom.render();
+        const oldVDom = newVDom.recursiveDeepClone();
+        newVDom.children[1].modifyRandomChilds(numberOfChilds);
+        timePerformanceArray.push(getExecutionTime(() => oldVDom.renderDiff(newVDom)));
+    });
+    return timePerformanceArray;
 }
 
 const initVDom = () => {
     const newVDom = generateChilds();
     writeToDom(newVDom);
+
     const oldVDom = newVDom.recursiveDeepClone();
 
-    newVDom.children[1].modifyRandomChilds(5000);
+    newVDom.children[1].modifyRandomChilds(100);
 
-    renderDiff(oldVDom, newVDom);
-    console.log(oldVDom);
-    console.log(newVDom);
+    callFnPerformanceLogging(() => oldVDom.renderDiff(newVDom), 'VElement.renderDiff() with 100 modified childs');
+  
+    const timePerformanceArray = getRenderDiffPerformance([10, 20, 50, 100, 300, 500, 1000, 3000, 5000]);
+    console.log(timePerformanceArray);
 };
 
 
-// TODO smeni a render diff da go menja i stariot objekt.
-// uredi go kodot
 // istrazi za Node api so e razlikata
 // performance da dava output array
 // napravi univerzalen react proekt za merenje vreme
