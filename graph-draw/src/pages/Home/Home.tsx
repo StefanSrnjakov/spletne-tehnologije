@@ -17,21 +17,33 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 const HomePage: React.FC = () => {
   // Hardcoded data arrays
-  const labels = [10, 20, 50, 100, 300, 500, 1000, 3000, 5000];
+  const labels = [10, 20, 50, 100, 300, 500, 1000, 3000, 5000, 9000];
   const dataArray1 = [
-    0.6000000238418579,
-    0.5,
-    0.6000000238418579,
-    0.5,
-    0.699999988079071,
-    0.8999999761581421,
-    1.300000011920929,
-    3.199999988079071,
-    5.300000011920929
-];
-  // const dataArray2 = [15, 25, 35, 45, 55, 65];
+    0.43000001311302183,
+    0.4399999976158142,
+    0.4800000011920929,
+    0.5699999928474426,
+    0.7400000035762787,
+    0.9399999856948853,
+    1.6,
+    3.519999998807907,
+    5.490000009536743,
+    9.630000007152557
+  ];
+  const dataArray2 = [
+    5.889999997615814,
+    6.25,
+    5.360000008344651,
+    5.010000002384186,
+    5.410000002384185,
+    6.9,
+    5.239999997615814,
+    6.449999994039535,
+    10.410000002384185,
+    9.730000013113022
+  ];
   const data1Label = 'Render Diff performance';
-  // const data2Label = 'Dataset 2';
+  const data2Label = 'Full Render performance';
   const xAxisLabel = 'Number of modifications';
   const yAxisLabel = 'Time taken (ms)';
   const title = 'Performance of Virtual Dom Diffing';
@@ -48,16 +60,16 @@ const HomePage: React.FC = () => {
         borderWidth: 2,
         tension: 0.3, // Smooth curve for the line
       },
-      // ...(dataArray2.length > 0
-      //   ? [{
-      //       label: data2Label,
-      //       data: dataArray2,
-      //       borderColor: 'rgba(153, 102, 255, 1)',
-      //       backgroundColor: 'rgba(153, 102, 255, 0.2)',
-      //       borderWidth: 2,
-      //       tension: 0.3,
-      //     }]
-      //   : []),
+      ...(dataArray2.length > 0
+        ? [{
+          label: data2Label,
+          data: dataArray2,
+          borderColor: 'rgba(153, 102, 255, 1)',
+          backgroundColor: 'rgba(153, 102, 255, 0.2)',
+          borderWidth: 2,
+          tension: 0.3,
+        }]
+        : []),
     ],
   };
 

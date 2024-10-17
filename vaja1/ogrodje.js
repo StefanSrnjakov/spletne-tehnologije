@@ -1,5 +1,36 @@
 const getUniqueRandomNumber = (from, to) => Math.floor(Math.random() * (to - from + 1)) + from;
+const getUniqueRandomArray = (from, to, count) => {
+    const array = [];
+    while (array.length < count) {
+        const random = Math.floor(Math.random() * (to - from + 1)) + from;
+        if (!array.includes(random)) {
+            array.push(random);
+        }
+    }
+    return array;
+}
 
+const COLORS = ['red', 'green', 'blue', 'grey', 'purple'];
+
+const FORBIDDEN_PROPS = [
+    "class", "for", "onclick", "onchange", "oninput", "tabindex", "readonly",
+    "maxlength", "colspan", "rowspan", "enctype", "autofocus", "spellcheck",
+    "srcset", "novalidate"
+];
+const FORBIDDEN_PROPS_MAPPING = {
+    "class": "className", "for": "htmlFor", "onclick": "onClick", "onchange": "onChange",
+    "oninput": "onInput", "tabindex": "tabIndex", "readonly": "readOnly", 
+    "maxlength": "maxLength", "colspan": "colSpan", "rowspan": "rowSpan", 
+    "enctype": "encType", "autofocus": "autoFocus", "spellcheck": "spellCheck", 
+    "srcset": "srcSet", "novalidate": "noValidate"
+};
+const FORBIDDEN_PROPS_REVERSE_MAPPING = {
+    "className": "class", "htmlFor": "for", "onClick": "onclick", "onChange": "onchange",
+    "onInput": "oninput", "tabIndex": "tabindex", "readOnly": "readonly", 
+    "maxLength": "maxlength", "colSpan": "colspan", "RowSpan": "rowspan", 
+    "encType": "enctype", "autoFocus": "autofocus", "spellCheck": "spellcheck", 
+    "srcSet": "srcset", "noValidate": "novalidate"
+};
 class VElement {
     constructor(tag, props = {}, children = [], _el = null) {
         if (typeof tag !== 'string' || tag.trim() === '') {
@@ -12,7 +43,7 @@ class VElement {
         }
 
         for (let key in props) {
-            if (forbiddenProps.includes(key)) {
+            if (FORBIDDEN_PROPS.includes(key)) {
                 throw new Error(`Forbidden prop used: "${key}" is not allowed.`);
             }
         }
@@ -25,12 +56,6 @@ class VElement {
         this._el = _el;
     }
 
-    addChildren(child) { }
-    render() { }
-    addDummyChilds(childNum, childTag) { }
-    recursiveDeepClone() { }
-    modifyRandomChilds() { }
-
     addChildren(child) {
         if (child instanceof VElement) {
             this.children.push(child);
@@ -42,11 +67,12 @@ class VElement {
         return child;
     }
 
+    // recursive DFS render
     render() {
         this._el = document.createElement(this.tag);
     
         for (let key in this.props) {
-            const actualProp = forbiddenPropsReverseMappping[key] || key;
+            const actualProp = FORBIDDEN_PROPS_REVERSE_MAPPING[key] || key;
             this._el.setAttribute(actualProp, this.props[key]);
         }
     
@@ -92,14 +118,15 @@ class VElement {
             const randomModifierColor = getUniqueRandomNumber(0, 4);
 
             if (this.children[randomIndex] instanceof VElement) {
-                this.children[randomIndex].props.style = `color: ${colors[randomModifierColor]};`;
-                this.children[randomIndex].children[0] = `${this.children[randomIndex].children[0]} - ${colors[randomModifierColor]}`;
+                this.children[randomIndex].props.style = `color: ${COLORS[randomModifierColor]};`;
+                this.children[randomIndex].children[0] = `dummy-modified - ${COLORS[randomModifierColor]}`;
                 this.children[randomIndex].props = {
                     ...this.children[randomIndex].props, id: `${this.children[randomIndex].props.id}-modified` 
                 };
             }
         }
     }
+    // Recursive DFS diffing
     renderDiff(newVDom) {
         try {
             // 1. Compare the tags
@@ -117,7 +144,7 @@ class VElement {
     
             // 2.1 Update or add new attributes
             for (let key in newProps) {
-                const actualProp = forbiddenPropsReverseMappping[key] || key;
+                const actualProp = FORBIDDEN_PROPS_REVERSE_MAPPING[key] || key;
                 if (oldProps[actualProp] !== newProps[key]) {
                     this._el.setAttribute(actualProp, newProps[key]);
                 }
@@ -125,7 +152,7 @@ class VElement {
     
             // 2.2 Remove old attributes that are no longer present
             for (let key in oldProps) {
-                const actualProp = forbiddenPropsReverseMappping[key] || key;
+                const actualProp = FORBIDDEN_PROPS_REVERSE_MAPPING[key] || key;
                 if (!(key in newProps)) {
                     this._el.removeAttribute(actualProp);
                 }
@@ -170,171 +197,3 @@ class VElement {
         }
     }
 }
-const getUniqueRandomArray = (from, to, count) => {
-    const array = [];
-    while (array.length < count) {
-        const random = Math.floor(Math.random() * (to - from + 1)) + from;
-        if (!array.includes(random)) {
-            array.push(random);
-        }
-    }
-    return array;
-}
-const generateChilds = () => {
-    const currentVDom = new VElement('div', { id: 'app' });
-
-    currentVDom.addChildren(new VElement('h1', {}, ['Hello, World!']));
-    const virtualUl = currentVDom.addChildren(new VElement('ul'));
-    virtualUl.addDummyChilds(10000, 'li');
-
-    return currentVDom;
-}
-const callFnPerformanceLogging = (func, label) => {
-    const start = performance.now();
-    const response = func();
-    const end = performance.now();
-    console.log(`Execution time of function ${label}: ${end - start} ms`);
-    return response;
-}
-
-const getExecutionTime = (func) => {
-    const start = performance.now();
-    func();
-    const end = performance.now();
-    return end - start;
-}
-
-const writeToDom = ( VDom ) => {
-    const root = document.getElementById('root');
-    root.innerHTML = '';
-    root.appendChild(callFnPerformanceLogging(() => VDom.render(), 'VElement.render()'));
-}
-
-const getRenderDiffPerformance = (numberOfModifiedChilds) => {
-    const timePerformanceArray = [];
-    for (let i = 0; i < numberOfModifiedChilds.length; i++) {
-        const numberOfChilds = numberOfModifiedChilds[i];
-        const newVDom = generateChilds();
-        newVDom.render();
-        const oldVDom = newVDom.recursiveDeepClone();
-        newVDom.children[1].modifyRandomChilds(numberOfChilds);
-        timePerformanceArray.push(getExecutionTime(() => oldVDom.renderDiff(newVDom)));
-    }
-    return timePerformanceArray;
-}
-
-
-const getRenderPerformance = (numberOfChilds) => {
-    const timePerformanceArray = [];
-    for (let i = 0; i < numberOfChilds.length; i++) {
-        const numberOfChildsValue = numberOfChilds[i];
-        const newVDom = generateChilds();
-        newVDom.render();
-        newVDom.children[1].modifyRandomChilds(numberOfChildsValue);
-        timePerformanceArray.push(getExecutionTime(() => newVDom.render()));
-    }
-    return timePerformanceArray;
-}
-const averageArrays = (arrays) => {
-    const length = arrays[0].length;
-    const sumArray = new Array(length).fill(0);
-
-    // Sum the corresponding elements of all arrays
-    arrays.forEach(array => {
-        for (let i = 0; i < length; i++) {
-            sumArray[i] += array[i];
-        }
-    });
-
-    // Calculate the average by dividing each sum by the number of runs
-    return sumArray.map(sum => sum / arrays.length);
-};
-
-
-const initVDom = () => {
-    const newVDom = generateChilds();
-    writeToDom(newVDom);
-
-    const oldVDom = newVDom.recursiveDeepClone();
-
-    newVDom.children[1].modifyRandomChilds(100);
-
-    callFnPerformanceLogging(() => oldVDom.renderDiff(newVDom), 'VElement.renderDiff() with 100 modified childs');
-  
-    const numberOfModifiedChilds = [10, 20, 50, 100, 300, 500, 1000, 3000, 5000, 9000];
-
-    const testRuns = 10;
-    let renderPerformanceResults = [];
-    let diffPerformanceResults = [];
-
-
-    for (let i = 0; i < testRuns; i++) {
-        // console.log(`Running test ${i + 1}...`);
-
-        // Run the getRenderPerformance and getRenderDiffPerformance functions
-        renderPerformanceResults.push(getRenderPerformance(numberOfModifiedChilds));
-        diffPerformanceResults.push(getRenderDiffPerformance(numberOfModifiedChilds));
-    }
-
-    // Calculate the average values for both performance arrays
-    const avgRenderPerformanceArray = averageArrays(renderPerformanceResults);
-    const avgDiffPerformanceArray = averageArrays(diffPerformanceResults);
-
-    console.log("Average render performance array:", avgRenderPerformanceArray);
-    console.log("Average diff performance array:", avgDiffPerformanceArray);
-};
-
-const colors = ['red', 'green', 'blue', 'grey', 'purple'];
-
-const forbiddenProps = [
-    "class",
-    "for",
-    "onclick",
-    "onchange",
-    "oninput",
-    "tabindex",
-    "readonly",
-    "maxlength",
-    "colspan",
-    "rowspan",
-    "enctype",
-    "autofocus",
-    "spellcheck",
-    "srcset",
-    "novalidate"
-];
-const forbiddenPropsMappping = {
-    "class": "className",
-    "for": "htmlFor",
-    "onclick": "onClick",
-    "onchange": "onChange",
-    "oninput": "onInput",
-    "tabindex": "tabIndex",
-    "readonly": "readOnly",
-    "maxlength": "maxLength",
-    "colspan": "colSpan",
-    "rowspan": "rowSpan",
-    "enctype": "encType",
-    "autofocus": "autoFocus",
-    "spellcheck": "spellCheck",
-    "srcset": "srcSet",
-    "novalidate": "noValidate"
-};
-const forbiddenPropsReverseMappping = {
-    "className": "class",
-    "htmlFor": "for",
-    "onClick": "onclick",
-    "onChange": "onchange",
-    "onInput": "oninput",
-    "tabIndex": "tabindex",
-    "readOnly": "readonly",
-    "maxLength": "maxlength",
-    "colSpan": "colspan",
-    "rowSpan": "rowspan",
-    "encType": "enctype",
-    "autoFocus": "autofocus",
-    "spellCheck": "spellcheck",
-    "srcSet": "srcset",
-    "noValidate": "novalidate"
-};
-
